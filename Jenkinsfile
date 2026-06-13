@@ -1,8 +1,12 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'VERSION_NUMBER', defaultValue: '1.0', description: 'Version number of the WAR file')
+    }
+
     environment {
-        WAR_FILE    = "target/sparkjava-hello-world-1.0.war"
+        WAR_FILE    = "target/sparkjava-hello-world-${VERSION_NUMBER}.war"
         TOMCAT_USER = credentials('tomcat-username')
         TOMCAT_PASS = credentials('tomcat-password')
         TOMCAT_HOST = "16.112.118.156"
