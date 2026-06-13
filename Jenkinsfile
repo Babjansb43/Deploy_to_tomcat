@@ -26,7 +26,10 @@ pipeline {
             }
         }
         stage ('Archiving') {
+            steps {
+                
             archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
+            }
         }
         stage('Deploy') {
             steps {
