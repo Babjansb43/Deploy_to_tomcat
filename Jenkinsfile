@@ -14,7 +14,9 @@ pipeline {
     }
 
     options {
-        buildDiscarder(logRotator(numToKeepStr:'5'))
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        timestamps()
     }
 
     stages {
@@ -31,7 +33,6 @@ pipeline {
         }
         stage ('Archiving') {
             steps {
-                
             archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
             }
         }
