@@ -5,7 +5,7 @@ pipeline {
         WAR_FILE    = "target/sparkjava-hello-world-1.0.war"
         TOMCAT_USER = credentials('tomcat-username')
         TOMCAT_PASS = credentials('tomcat-password')
-        TOMCAT_HOST = "18.61.174.88" // Replace with your Tomcat server's public IP
+        TOMCAT_HOST = "16.112.118.156"
         TOMCAT_PORT = "8080" // Default Tomcat port
     }
 
