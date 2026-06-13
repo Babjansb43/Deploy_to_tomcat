@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    curl - I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello"
+                    curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello"
                     '''
                 }
             }
