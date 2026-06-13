@@ -52,6 +52,15 @@ pipeline {
                 }
             }
         }
+        stage('Application Health') {
+            steps {
+                script {
+                    sh '''
+                    curl - I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello"
+                    '''
+                }
+            }
+        }
     }
     post {
         success {
