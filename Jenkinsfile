@@ -25,6 +25,9 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
+        stage ('Archiving') {
+            archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
+        }
         stage('Deploy') {
             steps {
                 script {
@@ -36,6 +39,14 @@ pipeline {
                     '''
                 }
             }
+        }
+    }
+    post {
+        success {
+            echo "Build number ${BUILD_NUMBER} is deployed suucessffully"
+        }
+        failure {
+            echo "Build number ${BUILD_NUMBER} is failed"
         }
     }
 }
