@@ -30,9 +30,9 @@ pipeline {
                 script {
                     // Deploy WAR file to Tomcat server
                     sh '''
-                    curl -u ${TOMCAT_USER}:${TOMCAT_PASS} \\
-                    --upload-file ${WAR_FILE} \\
-                    "http://${TOMCAT_HOST}:${TOMCAT_PORT}/manager/text/deploy?path=/sparkjava-hello-world&update=true"
+                    curl -u $TOMCAT_USER:$TOMCAT_PASS \
+                    --upload-file $WAR_FILE \
+                    "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
                     '''
                 }
             }
