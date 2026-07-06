@@ -3,13 +3,12 @@ pipeline {
 
     parameters {
         string(name: 'VERSION_NUMBER', defaultValue: '1.0', description: 'Version number of the WAR file')
+        string(name: 'TOMCAT_HOST', description: 'IP of the Tomcat Host')
     }
 
     environment {
         WAR_FILE    = "target/sparkjava-hello-world-${VERSION_NUMBER}.war"
-        TOMCAT_USER = credentials('tomcat-username')
-        TOMCAT_PASS = credentials('tomcat-password')
-        TOMCAT_HOST = "16.112.118.156"
+        TOMCAT_USER = credentials('tomcat_credentials')
         TOMCAT_PORT = "8080" // Default Tomcat port
     }
 
@@ -45,7 +44,7 @@ pipeline {
                 script {
                     // Deploy WAR file to Tomcat server
                     sh '''
-                    curl -u $TOMCAT_USER:$TOMCAT_PASS \
+                    curl -u $TOMCAT_USER \
                     --upload-file $WAR_FILE \
                     "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
                     '''
