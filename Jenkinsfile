@@ -34,17 +34,12 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
-        stage ('Archiving') {
-            steps {
-            archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
-            }
-        }
         stage('Deploy') {
             steps {
                 script {
                     // Deploy WAR file to Tomcat server
                     sh '''
-                    curl -u $TOMCAT_USER \
+                    curl -u $TOMCAT_USER_USR:$TOMCAT_USER_PSW \
                     --upload-file $WAR_FILE \
                     "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
                     '''
@@ -54,10 +49,19 @@ pipeline {
         stage('Application Health') {
             steps {
                 script {
-                    sh '''
-                    curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello"
-                    '''
+                    def result = sh(script: '''curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
+                    if ( result == "200") {
+                        echo "Application deployment success"
+                    }
+                    else {
+                        echo "Application deployment failed"
+                    }
                 }
+            }
+        }
+        stage ('Archiving') {
+            steps {
+            archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
             }
         }
     }
