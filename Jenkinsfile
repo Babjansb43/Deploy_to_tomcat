@@ -1,13 +1,11 @@
 pipeline {
     agent any
-
+    
     parameters {
-        string(name: 'VERSION_NUMBER', defaultValue: '1.0', description: 'Version number of the WAR file')
         string(name: 'TOMCAT_HOST', description: 'IP of the Tomcat Host')
     }
 
     environment {
-        WAR_FILE    = "target/sparkjava-hello-world-${VERSION_NUMBER}.war"
         TOMCAT_USER = credentials('tomcat_credentials')
         TOMCAT_PORT = "8080" // Default Tomcat port
     }
@@ -29,9 +27,27 @@ pipeline {
                     url: 'https://github.com/Babjansb43/Deploy_to_tomcat.git'
             }
         }
+        stage('Capture Version') {
+             steps {
+                 script {
+                     def pom = readMavenPom file: 'pom.xml'
+                     env.version = pom.version
+                     echo "${env.version}"
+                     env.WAR_FILE = "target/sparkjava-hello-world-${env.version}.war"
+                     echo "${env.WAR_FILE}"
+                 }
+             }
+        }
         stage('Build') {
             steps {
+                script {
                 sh 'mvn clean package'
+                }
+            }
+        }
+        stage ('Archiving') {
+            steps {
+            archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
             }
         }
         stage('Deploy') {
@@ -40,28 +56,25 @@ pipeline {
                     // Deploy WAR file to Tomcat server
                     sh '''
                     curl -u $TOMCAT_USER_USR:$TOMCAT_USER_PSW \
-                    --upload-file $WAR_FILE \
+                    --upload-file ${WAR_FILE} \
                     "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
                     '''
                 }
             }
         }
-        stage('Application Health') {
+        stage('Verify Deployment') {
             steps {
                 script {
-                    def result = sh(script: '''curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
-                    if ( result == "200") {
-                        echo "Application deployment success"
+                    echo "Verifying application availability..."
+                    def responseCode = sh(script: '''curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
+                    if ( responseCode == "200") {
+                        echo "Success! The application is up and running." 
                     }
                     else {
-                        echo "Application deployment failed"
+                        echo "Application responded with status: ${responseCode}"
+                        echo "Deployment verification failed"
                     }
                 }
-            }
-        }
-        stage ('Archiving') {
-            steps {
-            archiveArtifacts artifacts: 'target/*.war', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
             }
         }
     }
