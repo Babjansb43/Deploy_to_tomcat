@@ -32,9 +32,7 @@ pipeline {
                  script {
                      def pom = readMavenPom file: 'pom.xml'
                      env.version = pom.version
-                     echo "${env.version}"
                      env.WAR_FILE = "target/sparkjava-hello-world-${env.version}.war"
-                     echo "${env.WAR_FILE}"
                  }
              }
         }
@@ -54,26 +52,32 @@ pipeline {
             steps {
                 script {
                     // Deploy WAR file to Tomcat server
-                    sh '''
-                    curl -u $TOMCAT_USER_USR:$TOMCAT_USER_PSW \
-                    --upload-file ${WAR_FILE} \
-                    "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
-                    '''
+                    def env.server = readFile('servers').trim().split('\n')
+                    for (host in server) {
+                        sh '''
+                        curl -u $TOMCAT_USER_USR:$TOMCAT_USER_PSW \
+                        --upload-file ${WAR_FILE} \
+                        "http://${host}:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
+                        '''
+                    }
                 }
             }
         }
         stage('Verify Deployment') {
             steps {
                 script {
-                    echo "Verifying application availability..."
-                    def responseCode = sh(script: '''curl -I "http://$TOMCAT_HOST:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
-                    if ( responseCode == "200") {
-                        echo "Success! The application is up and running." 
+                    for (host in ${server}) {
+                        echo "Verifying application availability in ${host}"
+                        def responseCode = sh(script: '''curl -I "http://${host}:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
+                        if ( responseCode == "200") {
+                            echo "Success! The application in ${host}is up and running." 
+                        }
+                        else {
+                            echo "Application in ${host} responded with status: ${responseCode}"
+                            echo "Deployment verification failed"
+                       }
                     }
-                    else {
-                        echo "Application responded with status: ${responseCode}"
-                        echo "Deployment verification failed"
-                    }
+                    
                 }
             }
         }
