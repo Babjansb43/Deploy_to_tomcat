@@ -1,9 +1,7 @@
+def server = []
+
 pipeline {
     agent any
-    
-    parameters {
-        string(name: 'TOMCAT_HOST', description: 'IP of the Tomcat Host')
-    }
 
     environment {
         TOMCAT_USER = credentials('tomcat_credentials')
@@ -52,13 +50,15 @@ pipeline {
             steps {
                 script {
                     // Deploy WAR file to Tomcat server
-                    def env.server = readFile('servers').trim().split('\n')
+                    server = readFile('servers').trim().split('\n')
                     for (host in server) {
-                        sh '''
-                        curl -u $TOMCAT_USER_USR:$TOMCAT_USER_PSW \
-                        --upload-file ${WAR_FILE} \
-                        "http://${host}:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
-                        '''
+                        withEnv(["HOST=${host.trim()}"]) {
+                            sh '''
+                            curl -u "$TOMCAT_USER_USR:$TOMCAT_USER_PSW" \
+                            --upload-file "$WAR_FILE" \
+                            "http://$HOST:$TOMCAT_PORT/manager/text/deploy?path=/sparkjava-hello-world&update=true"
+                            '''
+                        }
                     }
                 }
             }
@@ -66,18 +66,29 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    for (host in ${server}) {
-                        echo "Verifying application availability in ${host}"
-                        def responseCode = sh(script: '''curl -I "http://${host}:$TOMCAT_PORT/sparkjava-hello-world/hello" | grep "HTTP" | awk '{print $2}' ''', returnStdout: true).trim()
-                        if ( responseCode == "200") {
-                            echo "Success! The application in ${host}is up and running." 
+                    def failedServers = []
+                    for (host in server) {
+                        withEnv(["HOST=${host.trim()}"]) {
+                            echo "Verifying application availability on ${host}"
+                            def responseCode = sh(
+                                script: '''
+                                curl -I "http://$HOST:$TOMCAT_PORT/sparkjava-hello-world/hello" \
+                                | grep "HTTP" | awk '{print $2}' ''', returnStdout: true ).trim()
+                            if (responseCode == "200") {
+                                echo "Success! The application on ${host} is up and running."
+                            } 
+                            else {
+                                echo "Deployment verification failed on ${host}. Response code: ${responseCode}"
+                                failedServers.add(host)
+                            }
                         }
-                        else {
-                            echo "Application in ${host} responded with status: ${responseCode}"
-                            echo "Deployment verification failed"
-                       }
                     }
-                    
+                    if (!failedServers.isEmpty()) {
+                        error(""" Deployment verification failed.The following servers failed:${failedServers.join('\n')}""")
+                    }
+                    else {
+                        echo "Deployment verification completed successfully on all servers."
+                    }
                 }
             }
         }
